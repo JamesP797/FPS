@@ -50,6 +50,21 @@
     <None Include="Shaders\reticle.frag">
       <Filter>Source Files\shaders</Filter>
     </None>
+    <None Include="Shaders\depth.vert">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="Shaders\depth.frag">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="Shaders\shadow.vert">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="Shaders\shadow.geom">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="Shaders\depth.geom">
+      <Filter>Source Files\shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Shader.h">

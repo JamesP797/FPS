@@ -6,12 +6,12 @@ C:\Users\jamie\source\repos\FPS\FPS\Enemy.h(41,30): warning C4244: '=': conversi
           [
               T=float
           ]
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(161,28): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(237,43): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(291,17): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(292,17): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(296,19): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(297,19): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(299,13): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(300,13): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\jamie\source\repos\FPS\FPS\main.cpp(206,28): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\jamie\source\repos\FPS\FPS\main.cpp(318,39): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\jamie\source\repos\FPS\FPS\main.cpp(439,17): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\jamie\source\repos\FPS\FPS\main.cpp(440,17): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\jamie\source\repos\FPS\FPS\main.cpp(444,19): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\jamie\source\repos\FPS\FPS\main.cpp(445,19): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\jamie\source\repos\FPS\FPS\main.cpp(447,13): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\jamie\source\repos\FPS\FPS\main.cpp(448,13): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
   FPS.vcxproj -> C:\Users\jamie\source\repos\FPS\x64\Debug\FPS.exe

@@ -32,12 +32,12 @@ public:
 	void move(float deltaTime)
 	{
 		// turn
-		this->yaw += deltaTime * 100;
+		/*this->yaw += deltaTime * 100;
 		updateVectors();
 
 		// move towards front
 		float velocity = this->MovementSpeed * deltaTime;
-		this->position += (this->front * velocity);
+		this->position += (this->front * velocity);*/
 		this->position.y = glm::sin(glfwGetTime());
 	}
 
