@@ -1,17 +1,1 @@
-﻿  main.cpp
-C:\Users\jamie\source\repos\FPS\FPS\Mesh.h(57,68): warning C4244: 'argument': conversion from 'unsigned int' to 'float', possible loss of data
-C:\Users\jamie\source\repos\FPS\FPS\Mesh.h(64,1): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
-C:\Users\jamie\source\repos\FPS\FPS\Enemy.h(41,30): warning C4244: '=': conversion from 'double' to 'T', possible loss of data
-          with
-          [
-              T=float
-          ]
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(206,28): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(318,39): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(439,17): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(440,17): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(444,19): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(445,19): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(447,13): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(448,13): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-  FPS.vcxproj -> C:\Users\jamie\source\repos\FPS\x64\Debug\FPS.exe
+﻿  FPS.vcxproj -> C:\Users\jamie\source\repos\FPS\x64\Debug\FPS.exe
