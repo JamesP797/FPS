@@ -76,6 +76,8 @@ vec3 gridSamplingDisk[20] = vec3[]
    vec3(0, 1,  1), vec3( 0, -1,  1), vec3( 0, -1, -1), vec3( 0, 1, -1)
 );
 
+float shadowCutoff = 30;
+
 void main()
 {
     float shadow;
@@ -116,6 +118,10 @@ float ShadowCalculation(vec3 fragPos, int n)
     */
     // get vector between fragment position and light position
     vec3 fragToLight = fragPos - pointLights[n].position;
+    if (length(fragToLight) > shadowCutoff)
+    {
+        return 0;
+    }
     float currentDepth = length(fragToLight);
     float shadow = 0.0;
     float bias = 0.15;
@@ -130,6 +136,9 @@ float ShadowCalculation(vec3 fragPos, int n)
             shadow += 1.0;
     }
     shadow /= float(samples);  
+
+    // make shadows further away not as strong
+    shadow *= -(1/shadowCutoff) * length(fragToLight) + 1;
         
     return shadow;
 }

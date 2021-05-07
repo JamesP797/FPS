@@ -158,8 +158,8 @@ int main()
     glEnableVertexAttribArray(0);
 
     lightPositions[0] = glm::vec3(0.0f, 2.2f, 10.0f);
-    lightPositions[1] = glm::vec3(0.0f, 2.2f, 20.0f);
-    lightPositions[2] = glm::vec3(0.0f, 2.2f, 30.0f);
+    lightPositions[1] = glm::vec3(0.0f, 2.2f, 30.0f);
+    lightPositions[2] = glm::vec3(0.0f, 2.2f, 50.0f);
 
     unsigned int depthMaps[NUM_LIGHTS];
     unsigned int depthMapFBOs[NUM_LIGHTS];
