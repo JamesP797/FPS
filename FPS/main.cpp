@@ -9,6 +9,8 @@
 #include <assimp/ai_assert.h>
 #include "Enemy.h"
 
+#define NUM_LIGHTS 3
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void processInput(GLFWwindow* window);
@@ -72,6 +74,8 @@ unsigned int chipSpec;
 Enemy* enemies[5];
 
 unsigned int VAO;
+
+glm::vec3 lightPositions[NUM_LIGHTS];
 
 int main()
 {
@@ -153,44 +157,59 @@ int main()
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
+    lightPositions[0] = glm::vec3(0.0f, 2.2f, 10.0f);
+    lightPositions[1] = glm::vec3(0.0f, 2.2f, 20.0f);
+    lightPositions[2] = glm::vec3(0.0f, 2.2f, 30.0f);
 
-    // shadows
-    // generate shadow buffer
+    unsigned int depthMaps[NUM_LIGHTS];
+    unsigned int depthMapFBOs[NUM_LIGHTS];
+    unsigned int depthTextures[] = { GL_TEXTURE1, GL_TEXTURE2, GL_TEXTURE3 };
     const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
-    unsigned int depthMapFBO;
-    glGenFramebuffers(1, &depthMapFBO);
-    // create depth cubemap texture
-    unsigned int depthCubemap;
-    glGenTextures(1, &depthCubemap);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
-    for (unsigned int i = 0; i < 6; ++i)
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    // attach depth texture as FBO's depth buffer
-    glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-    glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthCubemap, 0);
-    glDrawBuffer(GL_NONE);
-    glReadBuffer(GL_NONE);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+    for (int i = 0; i < NUM_LIGHTS; i++)
+    {
+        // shadows
+        // generate shadow buffer for each light in the scene
+        glGenFramebuffers(1, &(depthMapFBOs[i]));
+        // create depth cubemap texture
+        //unsigned int depthCubemap;
+        glGenTextures(1, &(depthMaps[i]));
+        glBindTexture(GL_TEXTURE_CUBE_MAP, depthMaps[i]);
+        for (unsigned int i = 0; i < 6; ++i)
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+        // attach depth texture as FBO's depth buffer
+        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBOs[i]);
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, depthMaps[i], 0);
+        glDrawBuffer(GL_NONE);
+        glReadBuffer(GL_NONE);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
 
     // draw in wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-    glm::vec3 lightPos = glm::vec3(0.0f, 2.2f, 10.0f);
 
     // shader configuration
     ourShader->use();
     // setup lighting
     //setupSpotLight(ourShader, 12.5f, 17.5f, 1.0f, 0.05f, 0.01f, glm::vec3(0.2f, 0.2f, 0.2f), glm::vec3(0.5f, 0.5f, 0.5f), glm::vec3(1.0f, 1.0f, 1.0f));
-    setupPointLight(ourShader, 0, lightPos, 1.0f, 0.09f, 0.032f, glm::vec3(0.2f, 0.2f, 0.2f), glm::vec3(0.5f, 0.5f, 0.5f), glm::vec3(1.0f, 1.0f, 1.0f));
-    //setupPointLight(ourShader, 1, glm::vec3(0.0f, 2.2f, 0.0f), 1.0f, 0.09f, 0.032f, glm::vec3(0.2f, 0.2f, 0.2f), glm::vec3(0.5f, 0.5f, 0.5f), glm::vec3(1.0f, 1.0f, 1.0f));
-    //setupPointLight(ourShader, 2, glm::vec3(0.0f, 2.2f, 10.0f), 1.0f, 0.09f, 0.032f, glm::vec3(0.2f, 0.2f, 0.2f), glm::vec3(0.5f, 0.5f, 0.5f), glm::vec3(1.0f, 1.0f, 1.0f));
-    //setupPointLight(ourShader, 3, glm::vec3(0.0f, 2.2f, 20.0f), 1.0f, 0.09f, 0.032f, glm::vec3(0.2f, 0.2f, 0.2f), glm::vec3(0.5f, 0.5f, 0.5f), glm::vec3(1.0f, 1.0f, 1.0f));
-    ourShader->setInt("depthMap", 1);
+    for (int i = 0; i < NUM_LIGHTS; i++)
+    {
+        setupPointLight(ourShader, i, lightPositions[i], 1.0f, 0.09f, 0.032f, glm::vec3(0.2f, 0.2f, 0.2f), glm::vec3(0.5f, 0.5f, 0.5f), glm::vec3(1.0f, 1.0f, 1.0f));
+    }
+
+    for (int i = 0; i < NUM_LIGHTS; i++)
+    {
+        char text[64];
+        sprintf_s(text, "depthMaps[%d]", i);
+        ourShader->setInt(text, i + 1);
+    }
 
     for (int i = 0; i < 5; i++) {
         enemies[i] = new Enemy(glm::vec3(0.0f, 0.0f, 0.0f + i * 5), "Models/robot/uploads_files_985353_BattleBot.obj", 0, red, redSpec);
@@ -234,33 +253,35 @@ int main()
         glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), aspect, near, far);
 
         
+        for (int i = 0; i < NUM_LIGHTS; i++)
+        {
 
-        std::vector<glm::mat4> shadowTransforms;
-        shadowTransforms.push_back(shadowProj *
-            glm::lookAt(lightPos, lightPos + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
-        shadowTransforms.push_back(shadowProj *
-            glm::lookAt(lightPos, lightPos + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
-        shadowTransforms.push_back(shadowProj *
-            glm::lookAt(lightPos, lightPos + glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)));
-        shadowTransforms.push_back(shadowProj *
-            glm::lookAt(lightPos, lightPos + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
-        shadowTransforms.push_back(shadowProj *
-            glm::lookAt(lightPos, lightPos + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
-        shadowTransforms.push_back(shadowProj *
-            glm::lookAt(lightPos, lightPos + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
+            std::vector<glm::mat4> shadowTransforms;
+            shadowTransforms.push_back(shadowProj *
+                glm::lookAt(lightPositions[i], lightPositions[i] + glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
+            shadowTransforms.push_back(shadowProj *
+                glm::lookAt(lightPositions[i], lightPositions[i] + glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)));
+            shadowTransforms.push_back(shadowProj *
+                glm::lookAt(lightPositions[i], lightPositions[i] + glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)));
+            shadowTransforms.push_back(shadowProj *
+                glm::lookAt(lightPositions[i], lightPositions[i] + glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)));
+            shadowTransforms.push_back(shadowProj *
+                glm::lookAt(lightPositions[i], lightPositions[i] + glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)));
+            shadowTransforms.push_back(shadowProj *
+                glm::lookAt(lightPositions[i], lightPositions[i] + glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)));
 
 
-        glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
-        glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
-        glClear(GL_DEPTH_BUFFER_BIT);
-        depthShader->use();
-        for (unsigned int i = 0; i < 6; ++i)
-            depthShader->setMat4("shadowMatrices[" + std::to_string(i) + "]", shadowTransforms[i]);
-        depthShader->setFloat("far_plane", far);
-        depthShader->setVec3("lightPos", lightPos);
-        renderScene(depthShader, false);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
+            glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+            glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBOs[i]);
+            glClear(GL_DEPTH_BUFFER_BIT);
+            depthShader->use();
+            for (unsigned int j = 0; j < 6; ++j)
+                depthShader->setMat4("shadowMatrices[" + std::to_string(j) + "]", shadowTransforms[j]);
+            depthShader->setFloat("far_plane", far);
+            depthShader->setVec3("lightPos", lightPositions[i]);
+            renderScene(depthShader, false);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        }
 
 
 
@@ -278,9 +299,12 @@ int main()
         ourShader->setMat4("view", view);
         ourShader->setVec3("viewPos", camera.Position);
         ourShader->setFloat("far_plane", far);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, depthCubemap);
-        renderScene(ourShader, true);
+        for (int i = 0; i < NUM_LIGHTS; i++)
+        {
+            glActiveTexture(depthTextures[i]);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, depthMaps[i]);
+            renderScene(ourShader, true);
+        }
 
         // draw reticle
         reticleShader->use();
@@ -365,18 +389,22 @@ void renderScene(Shader* shader, bool renderExtras)
 
     if (renderExtras)
     {
-        // draw physical light
+        // draw physical lights
+        glm::vec3 offset = glm::vec3(-1.5f, 4.0f, 10.0f) - lightPositions[0];
         lightSourceShader->use();
         glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = camera.GetViewMatrix();
         lightSourceShader->setMat4("projection", projection);
         lightSourceShader->setMat4("view", view);
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(-1.5f, 4.0f, 10.0f));
-        model = glm::scale(model, glm::vec3(0.005f, 0.005f, 0.001f));
-        model = glm::rotate(model, glm::radians(270.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-        lightSourceShader->setMat4("model", model);
-        light->Draw(*lightSourceShader);
+        for (int i = 0; i < NUM_LIGHTS; i++)
+        {
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, offset + lightPositions[i]);
+            model = glm::scale(model, glm::vec3(0.005f, 0.005f, 0.001f));
+            model = glm::rotate(model, glm::radians(270.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+            lightSourceShader->setMat4("model", model);
+            light->Draw(*lightSourceShader);
+        }
 
         // clear depth buffer so gun and reticle are rendered above world
         glClear(GL_DEPTH_BUFFER_BIT);
