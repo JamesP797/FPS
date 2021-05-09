@@ -65,6 +65,12 @@
     <None Include="Shaders\depth.geom">
       <Filter>Source Files\shaders</Filter>
     </None>
+    <None Include="Shaders\hdr.vert">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="Shaders\hdr.frag">
+      <Filter>Source Files\shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Shader.h">

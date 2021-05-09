@@ -21,6 +21,7 @@ void setupPointLight(Shader* shader, unsigned int n, glm::vec3 position, float c
 void drawReticle(Shader* reticleShader, unsigned int VAO);
 void renderScene(Shader* shader, bool renderExtras);
 void update();
+void renderQuad();
 
 // settings
 const unsigned int SCR_WIDTH = 1920;
@@ -41,7 +42,12 @@ bool shooting = false;
 float lastShot = 0.0f;
 
 // fog
-float fogIntensity = 0.5;
+float fogIntensity = 0.05;
+
+// hdr
+float exposure = 1.0f;
+bool hdr = true;
+bool hdrKeyPressed = false;
 
 // rectangle for crosshair
 float vertices[] = {
@@ -60,6 +66,7 @@ Shader* ourShader;
 Shader* lightSourceShader;
 Shader* reticleShader;
 Shader* depthShader;
+Shader* hdrShader;
 
 // models
 Model* hallway;
@@ -131,6 +138,7 @@ int main()
     lightSourceShader = new Shader("shaders/lightsource.vert", "shaders/lightsource.frag");
     reticleShader = new Shader("shaders/reticle.vert", "shaders/reticle.frag");
     depthShader = new Shader("shaders/depth.vert", "shaders/depth.frag", "shaders/depth.geom");
+    hdrShader = new Shader("shaders/hdr.vert", "shaders/hdr.frag");
 
     // load textures
     red = createTexture("Images/paintedmetal/PaintedMetal006_2K_Color.jpg");
@@ -159,6 +167,31 @@ int main()
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+
+
+    // HDR
+    unsigned int hdrFBO;
+    glGenFramebuffers(1, &hdrFBO);
+    // create floating point color buffer
+    unsigned int colorBuffer;
+    glGenTextures(1, &colorBuffer);
+    glBindTexture(GL_TEXTURE_2D, colorBuffer);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // create depth buffer (renderbuffer)
+    unsigned int rboDepth;
+    glGenRenderbuffers(1, &rboDepth);
+    glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT);
+    // attach buffers
+    glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffer, 0);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "Framebuffer not complete!" << std::endl;
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 
     lightPositions[0] = glm::vec3(0.0f, 2.2f, 10.0f);
     lightPositions[1] = glm::vec3(0.0f, 2.2f, 30.0f);
@@ -221,6 +254,9 @@ int main()
         enemies[i] = new Enemy(glm::vec3(0.0f, 0.0f, 0.0f + i * 5), "Models/robot/uploads_files_985353_BattleBot.obj", 0, red, redSpec);
     }
 
+    hdrShader->use();
+    hdrShader->setInt("hdrBuffer", 0);
+
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
@@ -232,7 +268,6 @@ int main()
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-
         // input
         // -----
         processInput(window);
@@ -243,21 +278,11 @@ int main()
         glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-
-
         // 1. first render to depth map
-        // ConfigureShaderAndMatrices - render scene from lights perspective
-        /*float near_plane = 1.0f, far_plane = 7.5f;
-        glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
-        glm::mat4 lightView = glm::lookAt(glm::vec3(0.0f, 1.0f, 15.0f),
-            glm::vec3(-3.0f, 1.0f, 15.0f),
-            glm::vec3(0.0f, 1.0f, 0.0f));
-        glm::mat4 lightSpaceMatrix = lightProjection * lightView;*/
         float aspect = (float)SHADOW_WIDTH / (float)SHADOW_HEIGHT;
         float near = 1.0f;
         float far = 25.0f;
         glm::mat4 shadowProj = glm::perspective(glm::radians(90.0f), aspect, near, far);
-
         
         for (int i = 0; i < NUM_LIGHTS; i++)
         {
@@ -289,34 +314,41 @@ int main()
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
         }
 
+        // render scene into floating point framebuffer
+        glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
+            // render scene as normal with shadow mapping (using depth map)
+            glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+            ourShader->use();
+            ourShader->setFloat("fogIntensity", fogIntensity);
+            // view/projection transformations
+            glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+            glm::mat4 view = camera.GetViewMatrix();
+            ourShader->setMat4("projection", projection);
+            ourShader->setMat4("view", view);
+            ourShader->setVec3("viewPos", camera.Position);
+            ourShader->setFloat("far_plane", far);
+            for (int i = 0; i < NUM_LIGHTS; i++)
+            {
+                glActiveTexture(depthTextures[i]);
+                glBindTexture(GL_TEXTURE_CUBE_MAP, depthMaps[i]);
+                renderScene(ourShader, true);
+            }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-        // 2. then render scene as normal with shadow mapping (using depth map)
-        glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+        // render hdr color buffer to 2D screen-filling quad with tone mapping shader
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        //ConfigureShaderAndMatrices();
+        hdrShader->use();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, colorBuffer);
+        hdrShader->setInt("hdr", hdr);
+        hdrShader->setFloat("exposure", exposure);
+        renderQuad();
 
-        ourShader->use();
-        ourShader->setFloat("fogIntensity", fogIntensity);
-        // view/projection transformations
-        glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-        glm::mat4 view = camera.GetViewMatrix();
-        ourShader->setMat4("projection", projection);
-        ourShader->setMat4("view", view);
-        ourShader->setVec3("viewPos", camera.Position);
-        ourShader->setFloat("far_plane", far);
-        for (int i = 0; i < NUM_LIGHTS; i++)
-        {
-            glActiveTexture(depthTextures[i]);
-            glBindTexture(GL_TEXTURE_CUBE_MAP, depthMaps[i]);
-            renderScene(ourShader, true);
-        }
 
         // draw reticle
         reticleShader->use();
-        drawReticle(reticleShader, VAO);
-
-        // draw reticle
         drawReticle(reticleShader, VAO);
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
@@ -454,10 +486,27 @@ void processInput(GLFWwindow* window)
     }
 
     if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-        fogIntensity += 0.05;
+        fogIntensity += 0.001;
     if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-        fogIntensity -= 0.05;
+        fogIntensity -= 0.001;
 
+    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+        exposure += 0.001;
+    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+    {
+        if (exposure > 0.0f)
+            exposure -= 0.001;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !hdrKeyPressed)
+    {
+        hdr = !hdr;
+        hdrKeyPressed = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_RELEASE)
+    {
+        hdrKeyPressed = false;
+    }
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -588,4 +637,35 @@ void drawReticle(Shader* reticleShader, unsigned int VAO) {
     reticleShader->setMat4("model", model);
     glBindVertexArray(VAO);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+}
+
+// renderQuad() renders a 1x1 XY quad in NDC
+// -----------------------------------------
+unsigned int quadVAO = 0;
+unsigned int quadVBO;
+void renderQuad()
+{
+    if (quadVAO == 0)
+    {
+        float quadVertices[] = {
+            // positions        // texture Coords
+            -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+            -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+             1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+             1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+        };
+        // setup plane VAO
+        glGenVertexArrays(1, &quadVAO);
+        glGenBuffers(1, &quadVBO);
+        glBindVertexArray(quadVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    }
+    glBindVertexArray(quadVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
 }

@@ -164,6 +164,8 @@
     <None Include="Shaders\depth.frag" />
     <None Include="Shaders\depth.geom" />
     <None Include="Shaders\depth.vert" />
+    <None Include="Shaders\hdr.frag" />
+    <None Include="Shaders\hdr.vert" />
     <None Include="Shaders\lighter.frag" />
     <None Include="Shaders\lighter.vert" />
     <None Include="Shaders\lightsource.frag" />
