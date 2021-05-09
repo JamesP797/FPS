@@ -61,10 +61,15 @@ uniform float far_plane;
 uniform samplerCube depthMaps[NR_POINT_LIGHTS];
 //uniform samplerCube depthMap;
 
+// fog
+uniform vec3 fogColor;
+uniform float fogIntensity;
+
 //vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir, float shadow);
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir); 
 //vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir, float shadow);
 float ShadowCalculation(vec3 fragPos, int n);
+vec3 applyFog(vec3 shading, float dist, vec3 fogColor, float fogIntensity);
 
 // array of offset direction for sampling
 vec3 gridSamplingDisk[20] = vec3[]
@@ -101,6 +106,7 @@ void main()
     //float closestDepth = texture(depthMap, fragToLight).r;
     
     result *= (1.0 - shadow);
+    result = applyFog(result, length(fs_in.FragPos - viewPos), fogColor, fogIntensity);
     FragColor = vec4(result, 1.0);
 }
 
@@ -204,3 +210,9 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     specular *= attenuation * intensity;
     return ambient + (1.0 - shadow) * (diffuse + specular);
 }*/
+
+vec3 applyFog(vec3 shading, float dist, vec3 fogColor, float fogIntensity)
+{
+    float fogAmount = 1.0 - exp(-dist * fogIntensity);
+    return mix(shading, fogColor, fogAmount);
+}

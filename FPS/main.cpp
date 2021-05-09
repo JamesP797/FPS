@@ -40,6 +40,9 @@ float lastFrame = 0.0f;
 bool shooting = false;
 float lastShot = 0.0f;
 
+// fog
+float fogIntensity = 0.5;
+
 // rectangle for crosshair
 float vertices[] = {
     -0.5f, -0.5f, 0.0f, // bottom left
@@ -211,6 +214,9 @@ int main()
         ourShader->setInt(text, i + 1);
     }
 
+    ourShader->setVec3("fogColor", 0.2f, 0.5f, 0.3f);
+    ourShader->setFloat("fogIntensity", fogIntensity);
+
     for (int i = 0; i < 5; i++) {
         enemies[i] = new Enemy(glm::vec3(0.0f, 0.0f, 0.0f + i * 5), "Models/robot/uploads_files_985353_BattleBot.obj", 0, red, redSpec);
     }
@@ -291,7 +297,7 @@ int main()
         //ConfigureShaderAndMatrices();
 
         ourShader->use();
-
+        ourShader->setFloat("fogIntensity", fogIntensity);
         // view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
         glm::mat4 view = camera.GetViewMatrix();
@@ -446,6 +452,11 @@ void processInput(GLFWwindow* window)
     if (glfwGetMouseButton(window, 0) == GLFW_PRESS && glm::abs(lastShot - glfwGetTime()) > 0.3f) {
         shooting = true;
     }
+
+    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+        fogIntensity += 0.05;
+    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+        fogIntensity -= 0.05;
 
 }
 
