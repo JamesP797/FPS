@@ -67,6 +67,7 @@ Shader* lightSourceShader;
 Shader* reticleShader;
 Shader* depthShader;
 Shader* hdrShader;
+Shader* shaderBlur;
 
 // models
 Model* hallway;
@@ -139,6 +140,7 @@ int main()
     reticleShader = new Shader("shaders/reticle.vert", "shaders/reticle.frag");
     depthShader = new Shader("shaders/depth.vert", "shaders/depth.frag", "shaders/depth.geom");
     hdrShader = new Shader("shaders/hdr.vert", "shaders/hdr.frag");
+    shaderBlur = new Shader("shaders/blur.vert", "shaders/blur.frag");
 
     // load textures
     red = createTexture("Images/paintedmetal/PaintedMetal006_2K_Color.jpg");
@@ -169,28 +171,58 @@ int main()
     glEnableVertexAttribArray(0);
 
 
-    // HDR
+    // configure (floating point) framebuffers
+    // ---------------------------------------
     unsigned int hdrFBO;
     glGenFramebuffers(1, &hdrFBO);
-    // create floating point color buffer
-    unsigned int colorBuffer;
-    glGenTextures(1, &colorBuffer);
-    glBindTexture(GL_TEXTURE_2D, colorBuffer);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    // create depth buffer (renderbuffer)
+    glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
+    // create 2 floating point color buffers (1 for normal rendering, other for brightness threshold values)
+    unsigned int colorBuffers[2];
+    glGenTextures(2, colorBuffers);
+    for (unsigned int i = 0; i < 2; i++)
+    {
+        glBindTexture(GL_TEXTURE_2D, colorBuffers[i]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);  // we clamp to the edge as the blur filter would otherwise sample repeated texture values!
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        // attach texture to framebuffer
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, colorBuffers[i], 0);
+    }
+    // create and attach depth buffer (renderbuffer)
     unsigned int rboDepth;
     glGenRenderbuffers(1, &rboDepth);
     glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT);
-    // attach buffers
-    glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffer, 0);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
+    // tell OpenGL which color attachments we'll use (of this framebuffer) for rendering 
+    unsigned int attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+    glDrawBuffers(2, attachments);
+    // finally check if framebuffer is complete
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "Framebuffer not complete!" << std::endl;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // ping-pong-framebuffer for blurring
+    unsigned int pingpongFBO[2];
+    unsigned int pingpongColorbuffers[2];
+    glGenFramebuffers(2, pingpongFBO);
+    glGenTextures(2, pingpongColorbuffers);
+    for (unsigned int i = 0; i < 2; i++)
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[i]);
+        glBindTexture(GL_TEXTURE_2D, pingpongColorbuffers[i]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); // we clamp to the edge as the blur filter would otherwise sample repeated texture values!
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, pingpongColorbuffers[i], 0);
+        // also check if framebuffers are complete (no need for depth buffer)
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+            std::cout << "Framebuffer not complete!" << std::endl;
+    }
 
 
     lightPositions[0] = glm::vec3(0.0f, 2.2f, 10.0f);
@@ -237,7 +269,8 @@ int main()
     //setupSpotLight(ourShader, 12.5f, 17.5f, 1.0f, 0.05f, 0.01f, glm::vec3(0.2f, 0.2f, 0.2f), glm::vec3(0.5f, 0.5f, 0.5f), glm::vec3(1.0f, 1.0f, 1.0f));
     for (int i = 0; i < NUM_LIGHTS; i++)
     {
-        setupPointLight(ourShader, i, lightPositions[i], 1.0f, 0.09f, 0.032f, glm::vec3(0.2f, 0.2f, 0.2f), glm::vec3(0.5f, 0.5f, 0.5f), glm::vec3(1.0f, 1.0f, 1.0f));
+        // og 0.09 0.032
+        setupPointLight(ourShader, i, lightPositions[i], 1.0f, 0.9f, 0.4f, glm::vec3(0.2f, 0.2f, 0.2f), glm::vec3(0.5f, 0.5f, 0.5f), glm::vec3(1.0f, 1.0f, 1.0f));
     }
 
     for (int i = 0; i < NUM_LIGHTS; i++)
@@ -247,15 +280,22 @@ int main()
         ourShader->setInt(text, i + 1);
     }
 
-    ourShader->setVec3("fogColor", 0.2f, 0.5f, 0.3f);
+    ourShader->setVec3("fogColor", 0.2f, 0.3f, 0.2f);
     ourShader->setFloat("fogIntensity", fogIntensity);
+
+    lightSourceShader->use();
+    lightSourceShader->setVec3("fogColor", 0.2f, 0.3f, 0.2f);
+    lightSourceShader->setFloat("fogIntensity", fogIntensity);
 
     for (int i = 0; i < 5; i++) {
         enemies[i] = new Enemy(glm::vec3(0.0f, 0.0f, 0.0f + i * 5), "Models/robot/uploads_files_985353_BattleBot.obj", 0, red, redSpec);
     }
 
+    shaderBlur->use();
+    shaderBlur->setInt("image", 0);
     hdrShader->use();
     hdrShader->setInt("hdrBuffer", 0);
+    hdrShader->setInt("bloomBlur", 1);
 
     // render loop
     // -----------
@@ -337,11 +377,31 @@ int main()
             }
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+        // 2. blur bright fragments with two-pass Gaussian Blur 
+        // --------------------------------------------------
+        bool horizontal = true, first_iteration = true;
+        unsigned int amount = 50;
+        shaderBlur->use();
+        for (unsigned int i = 0; i < amount; i++)
+        {
+            glBindFramebuffer(GL_FRAMEBUFFER, pingpongFBO[horizontal]);
+            shaderBlur->setInt("horizontal", horizontal);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, first_iteration ? colorBuffers[1] : pingpongColorbuffers[!horizontal]);  // bind texture of other framebuffer (or scene if first iteration)
+            renderQuad();
+            horizontal = !horizontal;
+            if (first_iteration)
+                first_iteration = false;
+        }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
         // render hdr color buffer to 2D screen-filling quad with tone mapping shader
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         hdrShader->use();
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, colorBuffer);
+        glBindTexture(GL_TEXTURE_2D, colorBuffers[0]);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, pingpongColorbuffers[!horizontal]);
         hdrShader->setInt("hdr", hdr);
         hdrShader->setFloat("exposure", exposure);
         renderQuad();
@@ -434,6 +494,7 @@ void renderScene(Shader* shader, bool renderExtras)
         glm::mat4 view = camera.GetViewMatrix();
         lightSourceShader->setMat4("projection", projection);
         lightSourceShader->setMat4("view", view);
+        lightSourceShader->setVec3("viewPos", camera.Position);
         for (int i = 0; i < NUM_LIGHTS; i++)
         {
             model = glm::mat4(1.0f);

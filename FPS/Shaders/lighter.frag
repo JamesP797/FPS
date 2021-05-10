@@ -1,4 +1,7 @@
 #version 330 core
+layout (location = 0) out vec4 FragColor;
+layout (location = 1) out vec4 BrightColor;
+
 struct Material {
     sampler2D texture_diffuse1;
     sampler2D texture_specular1;
@@ -44,8 +47,6 @@ struct SpotLight {
     vec3 specular;
 };
 uniform SpotLight spotLight;
-
-out vec4 FragColor;
 
 in VS_OUT {
     vec3 FragPos;
@@ -96,18 +97,22 @@ void main()
     // properties
     vec3 norm = normalize(fs_in.Normal);
     vec3 viewDir = normalize(viewPos - fs_in.FragPos);
-    
-    // might have to use a few shadow values for each respective light in the scene
+
     //vec3 result = CalcSpotLight(spotLight, norm, fs_in.FragPos, viewDir, shadow);    
     vec3 result = CalcPointLight(pointLights[0], norm, fs_in.FragPos, viewDir);
     for(int i = 1; i < NR_POINT_LIGHTS; i++)
         result += CalcPointLight(pointLights[i], norm, fs_in.FragPos, viewDir);
     //vec3 fragToLight = normalize(fs_in.FragPos - pointLights[0].position); 
-    //float closestDepth = texture(depthMap, fragToLight).r;
     
     result *= (1.0 - shadow);
     result = applyFog(result, length(fs_in.FragPos - viewPos), fogColor, fogIntensity);
     FragColor = vec4(result, 1.0);
+    // check whether fragment output is higher than threshold, if so output as brightness color
+    float brightness = dot(FragColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+    if(brightness > 1.0)
+        BrightColor = vec4(FragColor.rgb, 1.0);
+    else
+        BrightColor = vec4(0.0, 0.0, 0.0, 1.0);
 }
 
 float ShadowCalculation(vec3 fragPos, int n)

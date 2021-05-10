@@ -161,6 +161,8 @@
     <ClInclude Include="stb_image.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Shaders\blur.frag" />
+    <None Include="Shaders\blur.vert" />
     <None Include="Shaders\depth.frag" />
     <None Include="Shaders\depth.geom" />
     <None Include="Shaders\depth.vert" />
