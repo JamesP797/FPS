@@ -172,6 +172,8 @@
     <None Include="Shaders\lighter.vert" />
     <None Include="Shaders\lightsource.frag" />
     <None Include="Shaders\lightsource.vert" />
+    <None Include="Shaders\particle.frag" />
+    <None Include="Shaders\particle.vert" />
     <None Include="Shaders\reticle.frag" />
     <None Include="Shaders\reticle.vert" />
     <None Include="Shaders\shader.frag" />

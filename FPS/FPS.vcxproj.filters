@@ -77,6 +77,12 @@
     <None Include="Shaders\blur.frag">
       <Filter>Source Files\shaders</Filter>
     </None>
+    <None Include="Shaders\particle.vert">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="Shaders\particle.frag">
+      <Filter>Source Files\shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Shader.h">

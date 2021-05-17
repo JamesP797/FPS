@@ -14,6 +14,7 @@ public:
 	unsigned int textureSpec;
 	float MovementSpeed;
 	bool alive;
+	bool render;
 
 	Enemy(glm::vec3 initialPos, string modelPath, float initialYaw, unsigned int enemyTexture, unsigned int enemyTextureSpec)
 	{
@@ -26,6 +27,7 @@ public:
 		front = glm::vec3(0.0f, 0.0f, 1.0f);
 		MovementSpeed = 1.0f;
 		alive = true;
+		render = true;
 	}
 
 
@@ -38,7 +40,18 @@ public:
 		// move towards front
 		float velocity = this->MovementSpeed * deltaTime;
 		this->position += (this->front * velocity);*/
-		this->position.y = glm::sin(glfwGetTime());
+		if (this->alive)
+		{
+			this->position.y = glm::sin(glfwGetTime());
+		}
+		else
+		{
+			this->position.y -= deltaTime;
+			if (this->position.y < -5)
+			{
+				render = false;
+			}
+		}
 	}
 
 	void draw(Shader shader)
@@ -76,11 +89,15 @@ public:
 		return glm::abs(point.x - position.x) < 0.5f && glm::abs(point.y - position.y) < 0.5f && glm::abs(point.z - position.z) < 0.5f;
 	}
 
-	void takeDamage()
+	// returns true if we died
+	bool takeDamage()
 	{
 		health--;
-		if (health <= 0)
+		if (health <= 0) {
 			alive = false;
+			return true;
+		}
+		return false;
 	}
 
 	void debug()

@@ -7,9 +7,11 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <assimp/ai_assert.h>
+#include <time.h>
 #include "Enemy.h"
 
 #define NUM_LIGHTS 3
+#define NUM_PARTICLES 500
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -61,6 +63,22 @@ unsigned int indices[] = {
     0, 2, 3
 };
 
+float particleVertices[] = {
+    0.0f, 0.0f, 0.0f,
+    1.0f, 0.0f, 0.0f,
+    0.0f, 1.0f, 0.0f
+};
+
+struct Particle {
+    glm::vec3 Position, Velocity, Color, RotationDirection;
+    float RotationAmount, aliveTime, duration;
+};
+Particle particles[NUM_PARTICLES];
+unsigned int particleVAO;
+Enemy* justDied = NULL;
+
+glm::vec3 fireCenter = glm::vec3(0.0f, -50.0f, 0.0f);
+
 // shaders
 Shader* ourShader;
 Shader* lightSourceShader;
@@ -68,6 +86,7 @@ Shader* reticleShader;
 Shader* depthShader;
 Shader* hdrShader;
 Shader* shaderBlur;
+Shader* particleShader;
 
 // models
 Model* hallway;
@@ -141,6 +160,7 @@ int main()
     depthShader = new Shader("shaders/depth.vert", "shaders/depth.frag", "shaders/depth.geom");
     hdrShader = new Shader("shaders/hdr.vert", "shaders/hdr.frag");
     shaderBlur = new Shader("shaders/blur.vert", "shaders/blur.frag");
+    particleShader = new Shader("shaders/particle.vert", "shaders/particle.frag");
 
     // load textures
     red = createTexture("Images/paintedmetal/PaintedMetal006_2K_Color.jpg");
@@ -169,6 +189,18 @@ int main()
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+
+    // setup particle triangles
+    unsigned int particleVBO;
+    //unsigned int particleVAO;
+    glGenVertexArrays(1, &particleVAO);
+    glGenBuffers(1, &particleVBO);
+    glBindVertexArray(particleVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, particleVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(particleVertices), particleVertices, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 
     // configure (floating point) framebuffers
@@ -262,6 +294,21 @@ int main()
     // draw in wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
+    // setup particles
+    srand(time(NULL));
+    //Particle particles[10];
+    for (int i = 0; i < NUM_PARTICLES; i++)
+    {
+        Particle particle;
+        particle.Position = fireCenter + glm::normalize(glm::vec3((float)rand() / (float)RAND_MAX - 0.5f, (float)rand() / (float)RAND_MAX - 0.5f, (float)rand() / (float)RAND_MAX - 0.5f)) / 6.0f;
+        particle.Velocity = glm::vec3((float)rand() / (float)RAND_MAX / 10.0f, (float) rand()/ (float) RAND_MAX, (float)rand() / (float)RAND_MAX / 10.0f);
+        particle.RotationDirection = glm::normalize(glm::vec3((float)rand() / (float)RAND_MAX, (float)rand() / (float)RAND_MAX, (float)rand() / (float)RAND_MAX));
+        particle.Color = glm::vec3(1.0f, 1.0f, 0.0f);
+        particle.RotationAmount = rand() % 360;
+        particle.aliveTime = 0;
+        particle.duration = (float)rand() / (float)RAND_MAX * 2;
+        particles[i] = particle;
+    }
 
     // shader configuration
     ourShader->use();
@@ -375,6 +422,7 @@ int main()
                 glBindTexture(GL_TEXTURE_CUBE_MAP, depthMaps[i]);
                 renderScene(ourShader, true);
             }
+            
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         // 2. blur bright fragments with two-pass Gaussian Blur 
@@ -395,6 +443,28 @@ int main()
         }
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+        // render particles and ui
+        glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
+            // draw particle
+            /*particleShader->use();
+            particleShader->setMat4("projection", projection);
+            particleShader->setMat4("view", view);
+            for (int i = 0; i < 10; i++)
+            {
+                glm::mat4 model = glm::mat4(1.0f);
+                model = glm::translate(model, glm::vec3(0.0f, 0.0f, 7.0f) + particles[i].Position);
+                model = glm::rotate(model, glm::radians(particles[i].yRotation), glm::vec3(0.0f, 1.0f, 0.0f));
+                particleShader->setMat4("model", model);
+                particleShader->setVec3("color", 1.0f, 0.0f, 0.0f);
+                glBindVertexArray(particleVAO);
+                glDrawArrays(GL_TRIANGLES, 0, 3);
+            }*/
+
+            // draw reticle
+            reticleShader->use();
+            drawReticle(reticleShader, VAO);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
         // render hdr color buffer to 2D screen-filling quad with tone mapping shader
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         hdrShader->use();
@@ -405,11 +475,6 @@ int main()
         hdrShader->setInt("hdr", hdr);
         hdrShader->setFloat("exposure", exposure);
         renderQuad();
-
-
-        // draw reticle
-        reticleShader->use();
-        drawReticle(reticleShader, VAO);
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
@@ -426,7 +491,7 @@ int main()
 void update()
 {
     for (Enemy* bot : enemies) {
-        if (bot->alive) {
+        if (bot->render) {
             bot->move(deltaTime);
         }
     }
@@ -438,8 +503,30 @@ void update()
             if (bot->playerLooking(camera.Position, camera.Front)) {
                 shooting = false;
                 lastShot = glfwGetTime();
-                bot->takeDamage();
+                if (bot->takeDamage())
+                {
+                    justDied = bot;
+                }
             }
+        }
+    }
+
+    if (justDied != NULL)
+        fireCenter = justDied->position;
+
+    for (int i = 0; i < NUM_PARTICLES; i++)
+    {
+        particles[i].Position += particles[i].Velocity * deltaTime;
+        particles[i].aliveTime += deltaTime;
+        particles[i].Color.g = -particles[i].aliveTime / particles[i].duration + 1;
+        if (particles[i].aliveTime > particles[i].duration)
+        {
+            particles[i].Position = fireCenter + glm::normalize(glm::vec3((float)rand() / (float)RAND_MAX - 0.5f, (float)rand() / (float)RAND_MAX - 0.5f, (float)rand() / (float)RAND_MAX - 0.5f)) / 6.0f;
+            particles[i].Velocity = glm::vec3((float)rand() / (float)RAND_MAX / 10.0f, (float)rand() / (float)RAND_MAX, (float)rand() / (float)RAND_MAX / 10.0f);
+            particles[i].aliveTime = 0;
+            particles[i].RotationDirection = glm::normalize(glm::vec3((float)rand() / (float)RAND_MAX, (float)rand() / (float)RAND_MAX, (float)rand() / (float)RAND_MAX));
+            particles[i].Color = glm::vec3(1.0f, 1.0f, 0.0f);
+            particles[i].RotationAmount = rand() % 360;
         }
     }
 }
@@ -480,7 +567,7 @@ void renderScene(Shader* shader, bool renderExtras)
 
     // draw enemies
     for (Enemy* bot : enemies) {
-        if (bot->alive) {
+        if (bot->render) {
             bot->draw(*shader);
         }
     }
@@ -495,6 +582,7 @@ void renderScene(Shader* shader, bool renderExtras)
         lightSourceShader->setMat4("projection", projection);
         lightSourceShader->setMat4("view", view);
         lightSourceShader->setVec3("viewPos", camera.Position);
+        lightSourceShader->setVec3("lightColor", 1.0f, 1.0f, 1.0f);
         for (int i = 0; i < NUM_LIGHTS; i++)
         {
             model = glm::mat4(1.0f);
@@ -503,6 +591,23 @@ void renderScene(Shader* shader, bool renderExtras)
             model = glm::rotate(model, glm::radians(270.0f), glm::vec3(1.0f, 0.0f, 0.0f));
             lightSourceShader->setMat4("model", model);
             light->Draw(*lightSourceShader);
+        }
+
+        // draw particle effects
+        //particleShader->use();
+        //particleShader->setMat4("projection", projection);
+        //particleShader->setMat4("view", view);
+        for (int i = 0; i < NUM_PARTICLES; i++)
+        {
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model, particles[i].Position);
+            model = glm::rotate(model, glm::radians(particles[i].RotationAmount), particles[i].RotationDirection);
+            model = glm::scale(model, glm::vec3(0.02f, 0.02f, 0.02f));
+            lightSourceShader->setMat4("model", model);
+            lightSourceShader->setVec3("lightColor", particles[i].Color);
+            //particleShader->setVec3("color", 1.0f, 0.0f, 0.0f);
+            glBindVertexArray(particleVAO);
+            glDrawArrays(GL_TRIANGLES, 0, 3);
         }
 
         // clear depth buffer so gun and reticle are rendered above world
