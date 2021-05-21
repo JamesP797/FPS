@@ -40,7 +40,7 @@ public:
     float MouseSensitivity;
 
     // constructor with vectors
-    Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH) : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY)
+    Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH) : Front(glm::vec3(0.0f, 0.0f, 1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY)
     {
         Position = position;
         WorldUp = up;
@@ -49,7 +49,7 @@ public:
         updateCameraVectors();
     }
     // constructor with scalar values
-    Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch) : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY)
+    Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch) : Front(glm::vec3(0.0f, 0.0f, 1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY)
     {
         Position = glm::vec3(posX, posY, posZ);
         WorldUp = glm::vec3(upX, upY, upZ);
@@ -85,14 +85,14 @@ public:
         if (direction == RIGHT)
             Position += Right * velocity;
 
-        /*if (Position.x < -3.0f)
-            Position.x = -3.0f;
-        if (Position.x > 3.0f)
-            Position.x = 3.0f;
-        if (Position.z < 2.0f)
-            Position.z = 2.0f;
-        if (Position.z > 45.0f)
-            Position.z = 45.0f;*/
+        if (Position.x < -4.3f)
+            Position.x = -4.3f;
+        if (Position.x > 4.3f)
+            Position.x = 4.3f;
+        if (Position.z < 4.0f)
+            Position.z = 4.0f;
+        if (Position.z > 130.0f)
+            Position.z = 130.0f;
     }
 
     // processes input received from a mouse input system. Expects the offset value in both the x and y direction.

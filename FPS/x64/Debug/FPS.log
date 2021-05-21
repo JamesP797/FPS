@@ -1,25 +1,19 @@
 ﻿  main.cpp
-C:\Users\jamie\source\repos\FPS\FPS\Mesh.h(57,68): warning C4244: 'argument': conversion from 'unsigned int' to 'float', possible loss of data
 C:\Users\jamie\source\repos\FPS\FPS\Mesh.h(64,1): warning C4267: 'argument': conversion from 'size_t' to 'GLsizei', possible loss of data
-C:\Users\jamie\source\repos\FPS\FPS\Enemy.h(45,31): warning C4244: '=': conversion from 'double' to 'T', possible loss of data
-          with
-          [
-              T=float
-          ]
+C:\Users\jamie\source\repos\FPS\FPS\Enemy.h(46,13): warning C4244: 'argument': conversion from 'time_t' to 'unsigned int', possible loss of data
+C:\Users\jamie\source\repos\FPS\FPS\Enemy.h(54,37): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
+C:\Users\jamie\source\repos\FPS\FPS\Enemy.h(176,43): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
 C:\Users\jamie\source\repos\FPS\FPS\main.cpp(47,26): warning C4305: 'initializing': truncation from 'double' to 'float'
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(298,15): warning C4244: 'argument': conversion from 'time_t' to 'unsigned int', possible loss of data
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(307,42): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(354,28): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(505,39): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(529,50): warning C4244: '=': conversion from 'int' to 'float', possible loss of data
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(655,30): warning C4305: '+=': truncation from 'double' to 'float'
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(657,30): warning C4305: '-=': truncation from 'double' to 'float'
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(660,26): warning C4305: '+=': truncation from 'double' to 'float'
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(664,30): warning C4305: '-=': truncation from 'double' to 'float'
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(693,17): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(694,17): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(698,19): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(699,19): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(701,13): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
-C:\Users\jamie\source\repos\FPS\FPS\main.cpp(702,13): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\jamie\source\repos\FPS\FPS\main.cpp(364,36): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\jamie\source\repos\FPS\FPS\main.cpp(369,28): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\jamie\source\repos\FPS\FPS\main.cpp(692,30): warning C4305: '+=': truncation from 'double' to 'float'
+C:\Users\jamie\source\repos\FPS\FPS\main.cpp(694,30): warning C4305: '-=': truncation from 'double' to 'float'
+C:\Users\jamie\source\repos\FPS\FPS\main.cpp(697,26): warning C4305: '+=': truncation from 'double' to 'float'
+C:\Users\jamie\source\repos\FPS\FPS\main.cpp(701,30): warning C4305: '-=': truncation from 'double' to 'float'
+C:\Users\jamie\source\repos\FPS\FPS\main.cpp(730,17): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\jamie\source\repos\FPS\FPS\main.cpp(731,17): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\jamie\source\repos\FPS\FPS\main.cpp(735,19): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\jamie\source\repos\FPS\FPS\main.cpp(736,19): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\jamie\source\repos\FPS\FPS\main.cpp(738,13): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+C:\Users\jamie\source\repos\FPS\FPS\main.cpp(739,13): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
   FPS.vcxproj -> C:\Users\jamie\source\repos\FPS\x64\Debug\FPS.exe

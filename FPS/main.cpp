@@ -11,7 +11,7 @@
 #include "Enemy.h"
 
 #define NUM_LIGHTS 3
-#define NUM_PARTICLES 500
+//#define NUM_PARTICLES 500
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -69,15 +69,15 @@ float particleVertices[] = {
     0.0f, 1.0f, 0.0f
 };
 
-struct Particle {
-    glm::vec3 Position, Velocity, Color, RotationDirection;
-    float RotationAmount, aliveTime, duration;
-};
-Particle particles[NUM_PARTICLES];
+//struct Particle {
+//    glm::vec3 Position, Velocity, Color, RotationDirection;
+//    float RotationAmount, aliveTime, duration;
+//};
+//Particle particles[NUM_PARTICLES];
 unsigned int particleVAO;
-Enemy* justDied = NULL;
+//Enemy* justDied = NULL;
 
-glm::vec3 fireCenter = glm::vec3(0.0f, -50.0f, 0.0f);
+//glm::vec3 fireCenter = glm::vec3(0.0f, -50.0f, 0.0f);
 
 // shaders
 Shader* ourShader;
@@ -92,6 +92,7 @@ Shader* particleShader;
 Model* hallway;
 Model* gun;
 Model* light;
+Model* tube;
 
 // textures
 unsigned int red;
@@ -101,7 +102,7 @@ unsigned int textureSpec;
 unsigned int chip;
 unsigned int chipSpec;
 
-Enemy* enemies[5];
+Enemy* enemies[20];
 
 unsigned int VAO;
 
@@ -176,6 +177,7 @@ int main()
     hallway = new Model("Models/hallway/uploads_files_1892077_Corridor.obj");
     gun = new Model("Models/gun/Cyborg_Weapon.obj");
     light = new Model("Models/light/untitled.obj");
+    tube = new Model("Models/tube/tube.obj");
 
     // setup crosshair traingles
     unsigned int VBO, EBO;
@@ -295,7 +297,7 @@ int main()
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     // setup particles
-    srand(time(NULL));
+    /*srand(time(NULL));
     //Particle particles[10];
     for (int i = 0; i < NUM_PARTICLES; i++)
     {
@@ -308,7 +310,7 @@ int main()
         particle.aliveTime = 0;
         particle.duration = (float)rand() / (float)RAND_MAX * 2;
         particles[i] = particle;
-    }
+    }*/
 
     // shader configuration
     ourShader->use();
@@ -334,8 +336,8 @@ int main()
     lightSourceShader->setVec3("fogColor", 0.2f, 0.3f, 0.2f);
     lightSourceShader->setFloat("fogIntensity", fogIntensity);
 
-    for (int i = 0; i < 5; i++) {
-        enemies[i] = new Enemy(glm::vec3(0.0f, 0.0f, 0.0f + i * 5), "Models/robot/uploads_files_985353_BattleBot.obj", 0, red, redSpec);
+    for (int i = 0; i < 20; i++) {
+        enemies[i] = new Enemy(glm::vec3(-4.0f, 3.0f, 17.0f), "Models/robot/uploads_files_985353_BattleBot.obj", 0, red, redSpec);
     }
 
     shaderBlur->use();
@@ -344,11 +346,24 @@ int main()
     hdrShader->setInt("hdrBuffer", 0);
     hdrShader->setInt("bloomBlur", 1);
 
+    // enemies
+    int enemiesSpawned = 0;
+    float lastSpawn = 0;
+
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
     {
-        //printf("%f %f %f\n", camera.Position.x, camera.Position.y, camera.Position.z);
+        printf("\r%f %f %f", camera.Position.x, camera.Position.y, camera.Position.z);
+        fflush(stdout);
+        if (glfwGetTime() - lastSpawn > 5.0f && enemiesSpawned < 20)
+        {
+            enemies[enemiesSpawned]->render = true;
+            enemies[enemiesSpawned]->dropping = true;
+            enemiesSpawned++;
+            lastSpawn = glfwGetTime();
+        }
+
         // per-frame time logic
         // --------------------
         float currentFrame = glfwGetTime();
@@ -410,7 +425,7 @@ int main()
             ourShader->use();
             ourShader->setFloat("fogIntensity", fogIntensity);
             // view/projection transformations
-            glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+            glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 200.0f);
             glm::mat4 view = camera.GetViewMatrix();
             ourShader->setMat4("projection", projection);
             ourShader->setMat4("view", view);
@@ -492,43 +507,32 @@ void update()
 {
     for (Enemy* bot : enemies) {
         if (bot->render) {
-            bot->move(deltaTime);
+            bot->move(deltaTime, camera.Position);
+            bot->updateParticles(deltaTime);
         }
     }
 
     // combat
-    if (shooting)
-    {
-        for (Enemy* bot : enemies) {
-            if (bot->playerLooking(camera.Position, camera.Front)) {
-                shooting = false;
-                lastShot = glfwGetTime();
-                if (bot->takeDamage())
-                {
-                    justDied = bot;
-                }
+    for (Enemy* bot : enemies) {
+        if (shooting && bot->playerLooking(camera.Position, camera.Front)) {
+            bot->gettingShot = true;
+            //shooting = false;
+            //lastShot = glfwGetTime();
+            if (bot->takeDamage())
+            {
+                //justDied = bot;
             }
         }
-    }
-
-    if (justDied != NULL)
-        fireCenter = justDied->position;
-
-    for (int i = 0; i < NUM_PARTICLES; i++)
-    {
-        particles[i].Position += particles[i].Velocity * deltaTime;
-        particles[i].aliveTime += deltaTime;
-        particles[i].Color.g = -particles[i].aliveTime / particles[i].duration + 1;
-        if (particles[i].aliveTime > particles[i].duration)
+        else 
         {
-            particles[i].Position = fireCenter + glm::normalize(glm::vec3((float)rand() / (float)RAND_MAX - 0.5f, (float)rand() / (float)RAND_MAX - 0.5f, (float)rand() / (float)RAND_MAX - 0.5f)) / 6.0f;
-            particles[i].Velocity = glm::vec3((float)rand() / (float)RAND_MAX / 10.0f, (float)rand() / (float)RAND_MAX, (float)rand() / (float)RAND_MAX / 10.0f);
-            particles[i].aliveTime = 0;
-            particles[i].RotationDirection = glm::normalize(glm::vec3((float)rand() / (float)RAND_MAX, (float)rand() / (float)RAND_MAX, (float)rand() / (float)RAND_MAX));
-            particles[i].Color = glm::vec3(1.0f, 1.0f, 0.0f);
-            particles[i].RotationAmount = rand() % 360;
+            bot->gettingShot = false;
         }
     }
+
+    //if (justDied != NULL)
+    //   fireCenter = justDied->position;
+
+    
 }
 
 void renderScene(Shader* shader, bool renderExtras)
@@ -550,7 +554,7 @@ void renderScene(Shader* shader, bool renderExtras)
     // render hallway
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, glm::vec3(0.0f, -1.5f, 0.0f));
-    model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+    model = glm::scale(model, glm::vec3(1.5f, 1.5f, 1.5f));
     model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     shader->setMat4("model", model);
     if (renderExtras)
@@ -564,11 +568,36 @@ void renderScene(Shader* shader, bool renderExtras)
     {
         hallway->Draw(*shader);
     }
+    // render hallway
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(0.0f, -1.5f, 135.0f));
+    model = glm::scale(model, glm::vec3(1.5f, 1.5f, 1.5f));
+    model = glm::rotate(model, glm::radians(270.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    shader->setMat4("model", model);
+    if (renderExtras)
+    {
+        glDisable(GL_CULL_FACE);
+        shader->setInt("reverse_normals", 1);
+        hallway->Draw(*shader);
+        shader->setInt("reverse_normals", 0);
+    }
+    else
+    {
+        hallway->Draw(*shader);
+    }
+    // tube
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(-4.5f, 3.0f, 17.0f));
+    model = glm::scale(model, glm::vec3(8.0f, 8.0f, 8.0f));
+    model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    shader->setMat4("model", model);
+    tube->Draw(*shader);
 
     // draw enemies
     for (Enemy* bot : enemies) {
         if (bot->render) {
-            bot->draw(*shader);
+            bot->draw(*shader, lightSourceShader, particleVAO);
         }
     }
 
@@ -577,7 +606,7 @@ void renderScene(Shader* shader, bool renderExtras)
         // draw physical lights
         glm::vec3 offset = glm::vec3(-1.5f, 4.0f, 10.0f) - lightPositions[0];
         lightSourceShader->use();
-        glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+        glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 200.0f);
         glm::mat4 view = camera.GetViewMatrix();
         lightSourceShader->setMat4("projection", projection);
         lightSourceShader->setMat4("view", view);
@@ -597,7 +626,7 @@ void renderScene(Shader* shader, bool renderExtras)
         //particleShader->use();
         //particleShader->setMat4("projection", projection);
         //particleShader->setMat4("view", view);
-        for (int i = 0; i < NUM_PARTICLES; i++)
+        /*for (int i = 0; i < NUM_PARTICLES; i++)
         {
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::translate(model, particles[i].Position);
@@ -608,7 +637,7 @@ void renderScene(Shader* shader, bool renderExtras)
             //particleShader->setVec3("color", 1.0f, 0.0f, 0.0f);
             glBindVertexArray(particleVAO);
             glDrawArrays(GL_TRIANGLES, 0, 3);
-        }
+        }*/
 
         // clear depth buffer so gun and reticle are rendered above world
         glClear(GL_DEPTH_BUFFER_BIT);
@@ -647,8 +676,16 @@ void processInput(GLFWwindow* window)
         camera.ProcessKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         camera.ProcessKeyboard(RIGHT, deltaTime);
-    if (glfwGetMouseButton(window, 0) == GLFW_PRESS && glm::abs(lastShot - glfwGetTime()) > 0.3f) {
+    //if (glfwGetMouseButton(window, 0) == GLFW_PRESS && glm::abs(lastShot - glfwGetTime()) > 0.3f) {
+    //    shooting = true;
+    //}
+    if (glfwGetMouseButton(window, 0) == GLFW_PRESS) 
+    {
         shooting = true;
+    }
+    else 
+    {
+        shooting = false;
     }
 
     if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
